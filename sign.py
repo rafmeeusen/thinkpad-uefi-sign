@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import os
 import argparse
 import re as regex
 from Crypto.PublicKey import RSA
@@ -63,6 +64,20 @@ def find_first_ffsv2_volume_offset(data):
 
     return volume_occurrence.start()
 
+def try_read_keyfile(filename):
+    if not filename:
+        return None
+    key = None
+    try:
+        key_file = open(filename, "r")
+        key_bytes = key_file.read()
+        key_file.close()
+        key = RSA.importKey(key_bytes)
+    except FileNotFoundError:
+        print("INFO: key file not found:", filename)
+    except:
+        print("ERROR: key file invalid:", filename)
+    return key
 
 def main():
     parser = argparse.ArgumentParser(description='Lenovo UEFI signing tool, (C) 2019 Stefan Schmidt')
@@ -84,22 +99,18 @@ def main():
     # Get all TCPA blocks to update signature on each
     tcpa_volume_blocks = find_tcpa_volume_blocks(data)
 
-    key = None
-    if args.keyfile:
-        try:
-            key_file = open(args.keyfile, "r")
-            key_bytes = key_file.read()
-            key = RSA.importKey(key_bytes)
-            key_file.close()
-        except(FileNotFoundError):
-            print("INFO: key file not found.")
-        except:
-            print("ERROR: error when reading key file. BAD KEY FILE?")
-
-    if not key:
-        # no key yet after handling keyfile option: generate new key
+    # Read and/or generate and/or write RSA key
+    key = try_read_keyfile(args.keyfile)
+    if key:
+        print("INFO: Using key from file.")
+    else:
         print("INFO: Generating new 1024 bit key with 3 as public exponent...")
         key = RSA.generate(1024, e=3)
+        if args.keyfile and not os.path.exists(args.keyfile):
+            key_file = open(args.keyfile, "wb")
+            print("INFO: Writing new key to key file")
+            key_file.write(key.exportKey())
+            key_file.close
 
     for tcpa_volume_block in tcpa_volume_blocks:
         # Warning: We assume volume size and offset are still correct here, that may not be the case!
