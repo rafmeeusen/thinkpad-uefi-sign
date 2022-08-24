@@ -68,6 +68,7 @@ def main():
     parser = argparse.ArgumentParser(description='Lenovo UEFI signing tool, (C) 2019 Stefan Schmidt')
     parser.add_argument('file', metavar='INPUT_FILE', nargs=1, help='input file')
     parser.add_argument('-o', '--output', dest='outfile', metavar='OUTPUT_FILE', required=True, help='signed output file')
+    parser.add_argument('-k', '--key', dest='keyfile', metavar='PRIVATE_KEY_FILE', required=False, help='RSA private key file')
     args = parser.parse_args()
 
     input_file = open(args.file[0], "rb")
@@ -83,9 +84,22 @@ def main():
     # Get all TCPA blocks to update signature on each
     tcpa_volume_blocks = find_tcpa_volume_blocks(data)
 
-    # Generate a new RSA key-pair
-    print("INFO: Generating new 1024 bit key with 3 as public exponent...")
-    key = RSA.generate(1024, e=3)
+    key = None
+    if args.keyfile:
+        try:
+            key_file = open(args.keyfile, "r")
+            key_bytes = key_file.read()
+            key = RSA.importKey(key_bytes)
+            key_file.close()
+        except(FileNotFoundError):
+            print("INFO: key file not found.")
+        except:
+            print("ERROR: error when reading key file. BAD KEY FILE?")
+
+    if not key:
+        # no key yet after handling keyfile option: generate new key
+        print("INFO: Generating new 1024 bit key with 3 as public exponent...")
+        key = RSA.generate(1024, e=3)
 
     for tcpa_volume_block in tcpa_volume_blocks:
         # Warning: We assume volume size and offset are still correct here, that may not be the case!
