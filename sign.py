@@ -114,7 +114,7 @@ def main():
             key_file.close
         else:
             print("INFO: private RSA key:")
-            print(keyPem)
+            print(keyPem.decode())
 
     for tcpa_volume_block in tcpa_volume_blocks:
         # Warning: We assume volume size and offset are still correct here, that may not be the case!
