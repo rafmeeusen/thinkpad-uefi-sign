@@ -106,11 +106,15 @@ def main():
     else:
         print("INFO: Generating new 1024 bit key with 3 as public exponent...")
         key = RSA.generate(1024, e=3)
+        keyPem = key.exportKey()
         if args.keyfile and not os.path.exists(args.keyfile):
             key_file = open(args.keyfile, "wb")
             print("INFO: Writing new key to key file")
-            key_file.write(key.exportKey())
+            key_file.write(keyPem)
             key_file.close
+        else:
+            print("INFO: private RSA key:")
+            print(keyPem)
 
     for tcpa_volume_block in tcpa_volume_blocks:
         # Warning: We assume volume size and offset are still correct here, that may not be the case!
